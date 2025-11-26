@@ -5,9 +5,23 @@ function AdminPage() {
   const [password, setPassword] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const correctPassword = "admin123"; // 🔒 Change or load from .env
+  const [theme, setTheme] = useState("light");
 
-  // Keep admin logged in locally
+  const correctPassword = "admin123";
+
+  // Load theme from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) setTheme(savedTheme);
+  }, []);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.className = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  // Auto-login if saved
   useEffect(() => {
     const saved = localStorage.getItem("adminAuth");
     if (saved === "true") setAuthenticated(true);
@@ -22,32 +36,64 @@ function AdminPage() {
     }
   };
 
+  // Fetch all users + IP lookup
+  const fetchUsers = () => {
+    setLoading(true);
+
+    fetch("http://localhost:5000/api/users")
+      .then((res) => res.json())
+      .then(async (data) => {
+        const enriched = await Promise.all(
+          data.map(async (u) => {
+            if (!u.ip) return u;
+            try {
+              const r = await fetch(`https://ipapi.co/${u.ip}/json/`);
+              const ipData = await r.json();
+              return {
+                ...u,
+                ipLocation: ipData.city
+                  ? `${ipData.city}, ${ipData.country_name}`
+                  : "Unknown",
+              };
+            } catch {
+              return { ...u, ipLocation: "Unknown" };
+            }
+          })
+        );
+
+        setUsers(enriched);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  };
+
   useEffect(() => {
-    if (authenticated) {
-      setLoading(true);
-      fetch("http://localhost:5000/api/users")
-        .then((res) => res.json())
-        .then((data) => {
-          setUsers(data);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    }
+    if (authenticated) fetchUsers();
   }, [authenticated]);
 
+  // Delete user
+  const deleteUser = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+    await fetch(`http://localhost:5000/api/users/${id}`, {
+      method: "DELETE",
+    });
+
+    fetchUsers();
+  };
+
+  // Login Screen
   if (!authenticated) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-blue-800 text-white">
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 shadow-2xl w-80 text-center">
-          <h1 className="text-2xl font-semibold mb-4 text-white">
-            🔒 Admin Access
-          </h1>
+          <h1 className="text-2xl font-semibold mb-4">🔒 Admin Access</h1>
           <input
             type="password"
             placeholder="Enter admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 mb-4 bg-white/20 text-white placeholder-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full px-4 py-2 mb-4 bg-white/20 text-white rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
             onClick={handleLogin}
@@ -60,54 +106,102 @@ function AdminPage() {
     );
   }
 
+  // Loading screen
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-100 text-gray-700 text-lg">
+      <div className="h-screen flex items-center justify-center text-gray-700 text-lg">
         Loading user details...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div
+      className={`min-h-screen p-8 transition ${
+        theme === "dark"
+          ? "bg-gray-900 text-gray-200"
+          : "bg-gray-100 text-gray-800"
+      }`}
+    >
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-700">Admin Dashboard</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem("adminAuth");
-            setAuthenticated(false);
-          }}
-          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
-        >
-          Logout
-        </button>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+
+        <div className="flex items-center gap-4">
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="px-4 py-2 rounded-lg bg-gray-700 text-white"
+          >
+            {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
+          </button>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("adminAuth");
+              setAuthenticated(false);
+            }}
+            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      {/* User Data Table */}
-      <div className="bg-white shadow-xl rounded-2xl overflow-hidden">
+      {/* User Table */}
+      <div
+        className={`shadow-xl rounded-xl p-6 overflow-x-auto ${
+          theme === "dark" ? "bg-gray-800" : "bg-white"
+        }`}
+      >
         <table className="min-w-full">
-          <thead className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white uppercase text-sm">
+          <thead
+            className={`text-sm uppercase ${
+              theme === "dark"
+                ? "bg-blue-900 text-white"
+                : "bg-blue-600 text-white"
+            }`}
+          >
             <tr>
               <th className="py-3 px-4 text-left">Email</th>
-              <th className="py-3 px-4 text-left">Phone Number</th>
-              <th className="py-3 px-4 text-left">6-Digit Code</th>
-              <th className="py-3 px-4 text-left">Random Word</th>
+              <th className="py-3 px-4 text-left">Phone</th>
+              <th className="py-3 px-4 text-left">Word</th>
+              <th className="py-3 px-4 text-left">Code</th>
+              <th className="py-3 px-4 text-left">IP</th>
+              <th className="py-3 px-4 text-left">Location</th>
+              <th className="py-3 px-4 text-left">Date</th>
+              <th className="py-3 px-4 text-left">Action</th>
             </tr>
           </thead>
+
           <tbody>
             {users.map((user, index) => (
               <tr
                 key={index}
-                className="border-b hover:bg-gray-100 transition-all"
+                className={`border-b ${
+                  theme === "dark"
+                    ? "border-gray-600 hover:bg-gray-700"
+                    : "hover:bg-gray-50"
+                }`}
               >
                 <td className="py-3 px-4">{user.email}</td>
-                <td className="py-3 px-4">{user.phone}</td>
-                <td className="py-3 px-4 font-semibold text-blue-600">
+                <td className="py-3 px-4">{user.phone || "—"}</td>
+                <td className="py-3 px-4">{user.word}</td>
+                <td className="py-3 px-4 text-blue-600 font-semibold">
                   {user.code}
                 </td>
-                <td className="py-3 px-4 font-mono text-gray-700">
-                  {user.randomWord}
+                <td className="py-3 px-4">{user.ip || "Unknown"}</td>
+                <td className="py-3 px-4">{user.ipLocation || "Unknown"}</td>
+                <td className="py-3 px-4">
+                  {new Date(user.createdAt).toLocaleString()}
+                </td>
+                <td className="py-3 px-4">
+                  <button
+                    onClick={() => deleteUser(user._id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
@@ -115,12 +209,12 @@ function AdminPage() {
         </table>
       </div>
 
-      {/* Footer */}
-      <p className="text-sm text-gray-500 text-center mt-6">
-        © {new Date().getFullYear()} Admin Dashboard — Confidential Access Only
+      <p className="text-center text-sm mt-6 opacity-60">
+        © {new Date().getFullYear()} Admin Dashboard — Confidential
       </p>
     </div>
   );
 }
 
 export default AdminPage;
+
