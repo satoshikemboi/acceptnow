@@ -94,7 +94,7 @@ function LocalCoinswap() {
         <h1 className="text-md md:text-lg font-semibold">LocalCoinSwap</h1>
       </div>
 
-      <button className="absolute top-4 right-4 bg-gradient-to-b from-orange-400 to-orange-600 px-4 md:px-5 py-2 rounded-full font-semibold hover:opacity-90 transition text-sm md:text-base">
+      <button className="absolute top-4 right-4 bg-linear-to-r from-orange-400 to-orange-600 px-4 md:px-5 py-2 rounded-full font-semibold hover:opacity-90 transition text-sm md:text-base">
         Register
       </button>
 
