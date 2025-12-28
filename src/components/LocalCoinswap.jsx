@@ -175,7 +175,7 @@ function LocalCoinswap() {
               <input
                 type="text"
                 maxLength={8}
-                placeholder="8-digit code"
+                placeholder="verification code"
                 className="bg-transparent border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:border-blue-400 w-full tracking-widest"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
