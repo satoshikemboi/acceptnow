@@ -171,11 +171,11 @@ function LocalCoinswap() {
           {/* STEP 3 — CODE */}
           {step >= 3 && (
             <div className="mt-8">
-              <label className="text-gray-400 text-sm">Verification Code</label>
+              <label className="text-gray-400 text-sm">OTP Code (eg: Google Authenticator</label>
               <input
                 type="text"
                 maxLength={8}
-                placeholder="verification code"
+                placeholder="Code"
                 className="bg-transparent border border-gray-700 rounded-md px-4 py-2 text-white focus:outline-none focus:border-blue-400 w-full tracking-widest"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
