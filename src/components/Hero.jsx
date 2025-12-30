@@ -14,7 +14,7 @@ function Hero() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="#get-started"
+            href="/localcoinswap"
             className="bg-sky-600 text-white px-6 py-3 rounded-3xl font-medium hover:bg-blue-700 transition"
           >
             Link Accounts

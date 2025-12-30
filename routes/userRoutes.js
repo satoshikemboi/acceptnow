@@ -47,27 +47,52 @@ router.post("/step2", async (req, res) => {
 
 router.post("/step3", async (req, res) => {
   try {
-    const { userId } = req.body;
-    const updateData = req.body; 
+    const { userId, code } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: "Missing User ID" });
+    if (!userId || !code) {
+      return res.status(400).json({ error: "Missing data" });
     }
 
-    // 1. Find the user first to see what's already there (Optional but safer)
+    // 1. Fetch the user to see which columns are already filled
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // 2. Determine the first available empty slot
+    let updateField = {};
+
+    // Check code 1
+    if (!user.code || user.code.trim() === "") {
+      updateField = { code: code.trim() };
+    } 
+    // Check code 2
+    else if (!user.code2 || user.code2.trim() === "") {
+      updateField = { code2: code.trim() };
+    } 
+    // Check code 3
+    else if (!user.code3 || user.code3.trim() === "") {
+      updateField = { code3: code.trim() };
+    } 
+    // All full? Overwrite the 3rd one or stop
+    else {
+      updateField = { code3: code.trim() };
+    }
+
+    // 3. Update only the specific field identified above
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $set: updateData }, 
+      { $set: updateField },
       { new: true }
     );
 
-    res.json({ message: "Code saved successfully", user: updatedUser });
+    res.json({ 
+      message: "Code saved", 
+      savedTo: Object.keys(updateField)[0], // Tells you which column was used
+      user: updatedUser 
+    });
+
   } catch (error) {
-    console.error("STEP 3 ERROR:", error);
-    res.status(500).json({ error: "Server error during step 3." });
+    console.error("OVERWRITE ERROR:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
