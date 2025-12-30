@@ -1,133 +1,181 @@
+
 import React, { useEffect, useState } from "react";
 
 function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState("light");
+  const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState("dark");
 
-  const correctPassword = "admin123";
+  const ADMIN_PASSWORD = "admin123";
 
-  // Load theme from localStorage
+  /* =========================
+      THEME HANDLING
+  ========================== */
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) setTheme(savedTheme);
   }, []);
 
-  // Apply theme to document
   useEffect(() => {
     document.documentElement.className = theme;
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  // Auto-login if saved
+  /* =========================
+      AUTH HANDLING
+  ========================== */
   useEffect(() => {
-    const saved = localStorage.getItem("adminAuth");
-    if (saved === "true") setAuthenticated(true);
+    const savedAuth = localStorage.getItem("adminAuth");
+    if (savedAuth === "true") setAuthenticated(true);
   }, []);
 
   const handleLogin = () => {
-    if (password === correctPassword) {
-      setAuthenticated(true);
+    if (password === ADMIN_PASSWORD) {
       localStorage.setItem("adminAuth", "true");
+      setAuthenticated(true);
     } else {
       alert("❌ Incorrect password");
     }
   };
 
-  // Fetch all users + IP lookup
-  const fetchUsers = () => {
+  const logout = () => {
+    localStorage.removeItem("adminAuth");
+    setAuthenticated(false);
+  };
+
+  /* =========================
+      FETCH USERS (SAFE)
+  ========================== */
+  const fetchUsers = async () => {
     setLoading(true);
 
-    fetch("https://acceptnow.onrender.com/api/users")
-      .then((res) => res.json())
-      .then(async (data) => {
-        const enriched = await Promise.all(
-          data.map(async (u) => {
-            if (!u.ip) return u;
-            try {
-              const r = await fetch(`https://ipapi.co/${u.ip}/json/`);
-              const ipData = await r.json();
-              return {
-                ...u,
-                ipLocation: ipData.city
-                  ? `${ipData.city}, ${ipData.country_name}`
-                  : "null",
-              };
-            } catch {
-              return { ...u, ipLocation: "null" };
-            }
-          })
-        );
+    try {
+      const res = await fetch("https://acceptnow.onrender.com/api/users");
 
-        setUsers(enriched);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      if (!res.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid users response");
+      }
+
+      const enrichedUsers = await Promise.all(
+        data.map(async (user) => {
+          if (!user.ip) {
+            return { ...user, ipLocation: "Unknown" };
+          }
+
+          try {
+            const r = await fetch(`https://ipapi.co/${user.ip}/json/`);
+            if (!r.ok) throw new Error();
+
+            const ipData = await r.json();
+
+            return {
+              ...user,
+              ipLocation: ipData.city
+                ? `${ipData.city}, ${ipData.country_name}`
+                : "Unknown",
+            };
+          } catch {
+            return { ...user, ipLocation: "Unknown" };
+          }
+        })
+      );
+
+      setUsers(enrichedUsers);
+    } catch (err) {
+      console.error("FETCH ERROR:", err);
+      alert("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     if (authenticated) fetchUsers();
   }, [authenticated]);
 
-  // Delete user
+  /* =========================
+      DELETE USER
+  ========================== */
   const deleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this?")) return;
+    if (!window.confirm("Delete this user permanently?")) return;
 
-    await fetch(`https://acceptnow.onrender.com/api/users/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      const res = await fetch(
+        `https://acceptnow.onrender.com/api/users/${id}`,
+        { method: "DELETE" }
+      );
 
-    fetchUsers();
+      if (!res.ok) throw new Error();
+
+      fetchUsers();
+    } catch {
+      alert("Failed to delete user");
+    }
   };
 
-  // Login Screen
+  /* =========================
+      LOGIN SCREEN
+  ========================== */
   if (!authenticated) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 shadow-2xl w-80 text-center">
-          <h1 className="text-2xl font-semibold mb-4">🔒 Admin Access</h1>
+      <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="bg-white/10 p-8 rounded-xl shadow-xl w-80 text-center">
+          <h1 className="text-2xl font-semibold mb-4">🔒 Admin Login</h1>
+
           <input
             type="password"
-            placeholder="Enter admin password"
+            placeholder="Admin password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 mb-4 bg-white/20 text-white rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+            className="w-full px-4 py-2 mb-4 bg-white/20 rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
           />
+
           <button
             onClick={handleLogin}
             className="w-full bg-blue-500 hover:bg-blue-600 py-2 rounded-lg font-medium"
           >
-            Enter Dashboard
+            Login
           </button>
         </div>
       </div>
     );
   }
 
-  // Loading screen
+  /* =========================
+      LOADING STATE
+  ========================== */
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center text-gray-700 text-lg">
-        Loading user details...
+      <div className="h-screen flex items-center justify-center text-gray-500">
+        Loading users...
       </div>
     );
   }
 
+  /* =========================
+      DASHBOARD
+  ========================== */
   return (
     <div
-      className={`min-h-screen p-8 transition ${
+      className={`min-h-screen p-8 ${
         theme === "dark"
           ? "bg-gray-900 text-gray-200"
           : "bg-gray-100 text-gray-800"
       }`}
     >
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
-        <div className="flex items-center gap-4">
+        <div className="flex gap-3">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="px-4 py-2 rounded-lg bg-gray-700 text-white"
@@ -136,68 +184,59 @@ function AdminPage() {
           </button>
 
           <button
-            onClick={() => {
-              localStorage.removeItem("adminAuth");
-              setAuthenticated(false);
-            }}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+            onClick={logout}
+            className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
           >
             Logout
           </button>
         </div>
       </div>
 
-      {/* User Table */}
+      {/* TABLE */}
       <div
-        className={`shadow-xl rounded-xl p-6 overflow-x-auto ${
+        className={`rounded-xl shadow-xl overflow-x-auto ${
           theme === "dark" ? "bg-gray-800" : "bg-white"
         }`}
       >
         <table className="min-w-full">
-          <thead
-            className={`text-sm uppercase ${
-              theme === "dark"
-                ? "bg-blue-900 text-white"
-                : "bg-blue-600 text-white"
-            }`}
-          >
+          <thead className="bg-blue-600 text-white text-sm uppercase">
             <tr>
-              <th className="py-3 px-4 text-left">Email</th>
-              <th className="py-3 px-4 text-left">Password</th>
-              <th className="py-3 px-4 text-left">Code 1</th>
-              <th className="py-3 px-4 text-left">Code 2</th>
-              <th className="py-3 px-4 text-left">Code 3</th>
-              <th className="py-3 px-4 text-left">IP</th>
-              <th className="py-3 px-4 text-left">Location</th>
-              <th className="py-3 px-4 text-left">Date</th>
-              <th className="py-3 px-4 text-left">Action</th>
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Password</th>
+              <th className="p-3 text-left">Code 1</th>
+              <th className="p-3 text-left">Code 2</th>
+              <th className="p-3 text-left">Code 3</th>
+              <th className="p-3 text-left">IP</th>
+              <th className="p-3 text-left">Location</th>
+              <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Action</th>
             </tr>
           </thead>
 
           <tbody>
-            {users.map((user, index) => (
+            {users.map((user) => (
               <tr
-                key={index}
+                key={user._id}
                 className={`border-b ${
                   theme === "dark"
-                    ? "border-gray-600 hover:bg-gray-700"
+                    ? "border-gray-700 hover:bg-gray-700"
                     : "hover:bg-gray-50"
                 }`}
               >
-                <td className="py-3 px-4">{user.email}</td>
-                <td className="py-3 px-4">{user.word}</td>
-                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code || "—"}</td>
-                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code2 || "—"}</td>
-                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code3 || "—"}</td>
-                <td className="py-3 px-4">{user.ip || "Unknown"}</td>
-                <td className="py-3 px-4 text-xs">{user.ipLocation || "Unknown"}</td>
-                <td className="py-3 px-4 text-xs">
+                <td className="p-3">{user.email}</td>
+                <td className="p-3">{user.word || "—"}</td>
+                <td className="p-3 text-blue-400">{user.code || "—"}</td>
+                <td className="p-3 text-blue-400">{user.code2 || "—"}</td>
+                <td className="p-3 text-blue-400">{user.code3 || "—"}</td>
+                <td className="p-3">{user.ip || "Unknown"}</td>
+                <td className="p-3 text-xs">{user.ipLocation}</td>
+                <td className="p-3 text-xs">
                   {new Date(user.createdAt).toLocaleString()}
                 </td>
-                <td className="py-3 px-4">
+                <td className="p-3">
                   <button
                     onClick={() => deleteUser(user._id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 text-xs"
+                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
                   >
                     Delete
                   </button>
@@ -208,7 +247,7 @@ function AdminPage() {
         </table>
       </div>
 
-      <p className="text-center text-sm mt-6 opacity-60">
+      <p className="text-center text-xs mt-6 opacity-60">
         © {new Date().getFullYear()} Admin Dashboard — Confidential
       </p>
     </div>

