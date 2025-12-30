@@ -8,6 +8,9 @@ import userRoutes from "./routes/userRoutes.js";
 dotenv.config();
 const app = express();
 
+// Add this for accurate IP tracking in Step 1
+app.set("trust proxy", true); 
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -31,4 +34,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`✅ Server running on http://localhost:${PORT}`)
 );
-

